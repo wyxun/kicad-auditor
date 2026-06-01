@@ -1,0 +1,12 @@
+# 忽略发布包文件夹 (由用户手动发布在 GitHub Release)
+release/
+
+# 忽略本地编译的二进制及中间产物
+*.exe
+*.o
+*.obj
+build/
+.vscode/
+.idea/
+cmake-build-*/
+.DS_Store

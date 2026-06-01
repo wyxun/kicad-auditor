@@ -1,0 +1,100 @@
+{
+  "components": [
+    {
+      "lcsc_id": "C283625",
+      "name": "MOSFET N-CH 100V 50A TO-252",
+      "max_voltage": 100.0,
+      "max_current": 50.0
+    },
+    {
+      "lcsc_id": "C12345",
+      "name": "CAP CER 10uF 50V X7R 1206",
+      "max_voltage": 50.0,
+      "max_current": 0.0
+    },
+    {
+      "lcsc_id": "C20001",
+      "name": "DIODE GEN PURP 400V 1A SMA",
+      "max_voltage": 400.0,
+      "max_current": 1.0
+    },
+    {
+      "lcsc_id": "C155484",
+      "name": "LMR14050SDDAR Buck Regulator IC",
+      "max_voltage": 40.0,
+      "max_current": 5.0
+    },
+    {
+      "lcsc_id": "C5200096",
+      "name": "SS54 5A 40V Schottky Diode",
+      "max_voltage": 40.0,
+      "max_current": 5.0
+    },
+    {
+      "lcsc_id": "C111627",
+      "name": "FDD86102LZ N-CH MOS 100V 50A",
+      "max_voltage": 100.0,
+      "max_current": 50.0
+    },
+    {
+      "lcsc_id": "C341713",
+      "name": "NCE40P13S P-CH MOS -40V -13A",
+      "max_voltage": -40.0,
+      "max_current": -13.0
+    },
+    {
+      "lcsc_id": "C20917",
+      "name": "AO3400A N-CH MOS 30V 5.7A",
+      "max_voltage": 30.0,
+      "max_current": 5.7
+    },
+    {
+      "lcsc_id": "C53896873",
+      "name": "4.7uH 6A Power Inductor",
+      "max_voltage": 0.0,
+      "max_current": 6.0
+    },
+    {
+      "lcsc_id": "C2983091",
+      "name": "6.8uH 6A Power Inductor",
+      "max_voltage": 0.0,
+      "max_current": 6.0
+    },
+    {
+      "lcsc_id": "C72499",
+      "name": "220uF 50V Electrolytic Capacitor",
+      "max_voltage": 50.0,
+      "max_current": 0.0
+    },
+    {
+      "lcsc_id": "C6119887",
+      "name": "10uF 50V MLCC Capacitor 1206",
+      "max_voltage": 50.0,
+      "max_current": 0.0
+    },
+    {
+      "lcsc_id": "C668891",
+      "name": "BZT52C12-TP Zener Diode 12V",
+      "max_voltage": 12.0,
+      "max_current": 0.25
+    },
+    {
+      "lcsc_id": "C7420359",
+      "name": "RS2M Fast Recovery Diode 1000V 2A",
+      "max_voltage": 1000.0,
+      "max_current": 2.0
+    },
+    {
+      "lcsc_id": "C2687447",
+      "name": "AT32F421C8T7 ARM M4 MCU 3.6V",
+      "max_voltage": 3.6,
+      "max_current": 0.12
+    },
+    {
+      "lcsc_id": "C1509083",
+      "name": "MS5351M SOP-10 Clock Generator IC",
+      "max_voltage": 3.6,
+      "max_current": 0.05
+    }
+  ]
+}
