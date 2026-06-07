@@ -236,7 +236,7 @@ int run_sexpr_tests() {
         std::string_view sch_mock_content = R"(
 (schematic
   ;; 1. 正常的光耦隔离器件 U1
-  (symbol (property "Reference" "U1") (property "Value" "PC817") (at 100 100)
+  (symbol (property "Reference" "U1") (property "Value" "PC817") (property "Footprint" "Optocoupler_DIP-4") (property "LCSC" (value "C12345")) (at 100 100)
     (pin "1" (at -10 -10))  ; 绝对坐标 (90, 90) -> 初级输入+
     (pin "2" (at -10 10))   ; 绝对坐标 (90, 110) -> 初级地 (GND)
     (pin "3" (at 10 10))    ; 绝对坐标 (110, 110) -> 次级地 (SGND)
@@ -251,10 +251,12 @@ int run_sexpr_tests() {
     (pin "4" (at 10 -10))   ; 绝对坐标 (210, 90)
   )
 
-  ;; 3. 电源芯片 U3
-  (symbol (property "Reference" "U3") (property "Value" "LM2596") (at 300 200)
+  ;; 3. 电源芯片 U3 (关联数据库已有的 C155484, max_voltage 40V, max_current 5A)
+  (symbol (property "Reference" "U3") (property "Value" "LM2596") (property "LCSC" (value "C155484")) (at 300 200)
     (pin "FB" (at -10 0))   ; 绝对坐标 (290, 200)
-    (pin "EN" (at 10 0))    ; 绝对坐标 (310, 200) -> 悬空
+    (pin "EN" (at 10 0))    ; 绝对坐标 (310, 200)
+    (pin "SW" (at 0 10))    ; 绝对坐标 (300, 210)
+    (pin "VIN" (at 10 10))  ; 绝对坐标 (310, 210)
   )
 
   ;; 4. FB分压电阻 R1 (1.2M)
@@ -263,13 +265,36 @@ int run_sexpr_tests() {
     (pin "2" (at 0 10))     ; 绝对坐标 (290, 160) -> 连 FB
   )
 
-  ;; 5. FB分压电阻 R2 (10k)
-  (symbol (property "Reference" "R2") (property "Value" "10k") (at 290 250)
+  ;; 5. FB分压电阻 R2 (200k)
+  (symbol (property "Reference" "R2") (property "Value" "200k") (at 290 250)
     (pin "1" (at 0 -10))    ; 绝对坐标 (290, 240) -> 连 FB
     (pin "2" (at 0 10))     ; 绝对坐标 (290, 260) -> 连 SGND
   )
 
-  ;; 6. 导线与网络标签
+  ;; 6. 故意超载发热的 0603 电阻 R3 (功耗 = 12^2/100 = 1.44W > 0.1W limit)
+  (symbol (property "Reference" "R3") (property "Value" "100") (property "Footprint" "Resistor_SMD:R_0603_1608Metric") (at 400 100)
+    (pin "1" (at 0 -10))  ; 绝对坐标 (400, 90)
+    (pin "2" (at 0 10))   ; 绝对坐标 (400, 110)
+  )
+
+  ;; 7. 缺失数据库规格记录的芯片 U4
+  (symbol (property "Reference" "U4") (property "Value" "MockChip") (property "LCSC" (value "C999999")) (at 500 200)
+    (pin "VCC" (at -10 0)) ; 绝对坐标 (490, 200)
+  )
+
+  ;; 8. 电感 L1 (载流 3A < 芯片源 5A)
+  (symbol (property "Reference" "L1") (property "Value" "2.2uH") (property "LCSC" (value "C_L_MOCK_3A")) (at 300 300)
+    (pin "1" (at 0 -10)) ; 绝对坐标 (300, 290)
+    (pin "2" (at 0 10))  ; 绝对坐标 (300, 310)
+  )
+
+  ;; 9. 续流二极管 D1 (载流 3A < 芯片源 5A)
+  (symbol (property "Reference" "D1") (property "Value" "SS34") (property "LCSC" (value "C_D_MOCK_3A")) (at 200 300)
+    (pin "1" (at 0 -10)) ; 绝对坐标 (200, 290)
+    (pin "2" (at 0 10))  ; 绝对坐标 (200, 310)
+  )
+
+  ;; 10. 导线与网络标签
   (wire (pts (xy 90 110) (xy 80 110)))
   (label "GND" (at 80 110))
   (wire (pts (xy 110 110) (xy 120 110)))
@@ -288,6 +313,25 @@ int run_sexpr_tests() {
   (label "SGND" (at 290 270))
   (wire (pts (xy 290 140) (xy 290 130))) ; R1-1 连 Vout
   (label "Vout" (at 290 130))
+
+  ;; 连线构成开关回路与高压/功耗测试
+  (wire (pts (xy 300 210) (xy 300 290))) ; U3.SW 连 L1.1
+  (wire (pts (xy 300 290) (xy 200 290))) ; L1.1 连 D1.1 (SW_OUT 网络)
+  (label "SW_OUT" (at 300 250))
+
+  (wire (pts (xy 300 310) (xy 300 320))) ; L1.2 连 Vout
+  (wire (pts (xy 300 320) (xy 290 130)))
+  
+  (wire (pts (xy 200 310) (xy 200 320))) ; D1.2 连 GND
+  (label "GND" (at 200 320))
+
+  (wire (pts (xy 310 210) (xy 330 210))) ; U3.VIN 连 +50V (触发耐压超载 ERROR)
+  (label "+50V" (at 330 210))
+
+  (wire (pts (xy 400 90) (xy 400 80)))   ; R3.1 连 +12V
+  (label "+12V" (at 400 80))
+  (wire (pts (xy 400 110) (xy 400 120))) ; R3.2 连 GND
+  (label "GND" (at 400 120))
 )
         )";
 
@@ -300,7 +344,7 @@ int run_sexpr_tests() {
             assert_true(load_ok, "Build schematic graph topology and component map");
 
             // 验证器件提取数量
-            assert_true(analyzer.get_components().size() == 5, "Extracted exactly 5 schematic components");
+            assert_true(analyzer.get_components().size() == 9, "Extracted exactly 9 schematic components");
             
             // 验证引脚提取
             const auto* u1 = &analyzer.get_components()[0];
@@ -313,10 +357,25 @@ int run_sexpr_tests() {
             assert_true(net_90_110 == "GND", "U1 pin 2 is in GND network");
             assert_true(net_110_110 == "SGND", "U1 pin 3 is in SGND network");
 
+            // 验证自定义属性提取
+            assert_true(u1->properties.at("Reference") == "U1", "U1 Reference property matches");
+            assert_true(u1->properties.at("Value") == "PC817", "U1 Value property matches");
+            assert_true(u1->properties.at("Footprint") == "Optocoupler_DIP-4", "U1 Footprint property matches");
+            assert_true(u1->properties.at("LCSC") == "C12345", "U1 LCSC property matches (compatible style)");
+
+            // 验证 ComponentAnalysisResult 中自定义属性的传递
+            ComponentAnalysisResult analysis_res = analyzer.analyze_component("U1");
+            assert_true(analysis_res.found, "U1 component analysis result found");
+            assert_true(analysis_res.properties.at("Reference") == "U1", "Analysis result U1 Reference property matches");
+            assert_true(analysis_res.properties.at("Value") == "PC817", "Analysis result U1 Value property matches");
+            assert_true(analysis_res.properties.at("Footprint") == "Optocoupler_DIP-4", "Analysis result U1 Footprint property matches");
+            assert_true(analysis_res.properties.at("LCSC") == "C12345", "Analysis result U1 LCSC property matches (compatible style)");
+
             // 运行规则库分析
             SchRuleRegistry registry;
             registry.register_rule(create_isolation_rule());
             registry.register_rule(create_fb_resistor_rule());
+            registry.register_rule(create_comp_spec_rule());
 
             Report report = analyzer.analyze(registry);
 
@@ -331,6 +390,13 @@ int run_sexpr_tests() {
             bool has_u3_fb_warning = false;
             bool has_u3_cff_info = false;
             bool has_u3_en_warning = false;
+
+            bool has_u4_spec_info = false;
+            bool has_u3_volt_error = false;
+            bool has_r3_power_error = false;
+            bool has_l1_current_error = false;
+            bool has_d1_current_error = false;
+            bool has_u3_fb_impedance_warning = false;
 
             for (const auto& v : report.violations) {
                 if (v.rule_id == "SCH_ISO_01") {
@@ -348,6 +414,25 @@ int run_sexpr_tests() {
                             has_u3_en_warning = true;
                         }
                     }
+                } else if (v.rule_id == "SCH_COMP_01") {
+                    if (v.location == "U4" && v.severity == "INFO" && v.message.find("not found") != std::string::npos) {
+                        has_u4_spec_info = true;
+                    }
+                    if (v.location == "U3" && v.severity == "ERROR" && v.message.find("maximum voltage") != std::string::npos) {
+                        has_u3_volt_error = true;
+                    }
+                    if (v.location == "R3" && v.severity == "ERROR" && v.message.find("calculated power") != std::string::npos) {
+                        has_r3_power_error = true;
+                    }
+                    if (v.location == "L1" && v.severity == "ERROR" && v.message.find("saturation current") != std::string::npos) {
+                        has_l1_current_error = true;
+                    }
+                    if (v.location == "D1" && v.severity == "ERROR" && v.message.find("maximum current") != std::string::npos) {
+                        has_d1_current_error = true;
+                    }
+                    if (v.location == "U3" && v.severity == "WARNING" && v.message.find("equivalent impedance") != std::string::npos) {
+                        has_u3_fb_impedance_warning = true;
+                    }
                 }
             }
 
@@ -356,6 +441,13 @@ int run_sexpr_tests() {
             assert_true(has_u3_fb_warning, "Assert U3 has high impedance feedback WARNING (1.21 MOhm)");
             assert_true(has_u3_cff_info, "Assert U3 reports Cff feedforward capacitor missing INFO");
             assert_true(has_u3_en_warning, "Assert U3 has floating EN pin WARNING");
+
+            assert_true(has_u4_spec_info, "Assert U4 reports database spec missing INFO");
+            assert_true(has_u3_volt_error, "Assert U3 reports maximum voltage overlimit ERROR (50V > 40V)");
+            assert_true(has_r3_power_error, "Assert R3 reports package power dissipation overlimit ERROR");
+            assert_true(has_l1_current_error, "Assert L1 reports saturation current safety risk ERROR");
+            assert_true(has_d1_current_error, "Assert D1 reports maximum current safety risk ERROR");
+            assert_true(has_u3_fb_impedance_warning, "Assert U3 reports equivalent FB impedance WARNING");
         }
     }
 

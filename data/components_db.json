@@ -95,6 +95,18 @@
       "name": "MS5351M SOP-10 Clock Generator IC",
       "max_voltage": 3.6,
       "max_current": 0.05
+    },
+    {
+      "lcsc_id": "C_L_MOCK_3A",
+      "name": "Mock 2.2uH 3A Power Inductor",
+      "max_voltage": 0.0,
+      "max_current": 3.0
+    },
+    {
+      "lcsc_id": "C_D_MOCK_3A",
+      "name": "Mock SS34 3A Diode",
+      "max_voltage": 40.0,
+      "max_current": 3.0
     }
   ]
 }

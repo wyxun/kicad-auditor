@@ -8,6 +8,9 @@
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
+#include <queue>
+#include <cctype>
 #include "common/types.hpp"
 #include "common/sexpr.hpp"
 #include "common/registry.hpp"
@@ -22,6 +25,7 @@ using namespace auditor;
 void print_global_help() {
     std::cout << "========================================================\n"
               << " KiCad-Auditor - Modern PCB Electrical Clearance Auditor\n"
+              << " Version: V0.0.0.2\n"
               << "========================================================\n"
               << "Usage:\n"
               << "  kicad-auditor.exe <command> [options]\n\n"
@@ -29,6 +33,7 @@ void print_global_help() {
               << "  sch      Analyze schematic files (.kicad_sch) for configuration & safety targets\n"
               << "  pcb      Parse PCB layout files (.kicad_pcb) and output physical features\n"
               << "  run      Run complete electrical clearance & safety rules auditing\n"
+              << "  param    Analyze specific schematic component for net connections & neighbors\n"
               << "  test     Run geometric core engine self-diagnostic unit tests\n\n"
               << "Use \"kicad-auditor.exe <command> --help\" for more options of a specific command.\n";
 }
@@ -57,6 +62,15 @@ void print_command_help(std::string_view command) {
                   << "  -c, --clearance <val>  Global threshold for clearance check in mm (default: 0.2)\n"
                   << "  -o, --output <file>    Path to output full audit Markdown report\n"
                   << "  -h, --help             Show this help message\n";
+    } else if (command == "param") {
+        std::cout << "Usage: kicad-auditor.exe param <ref> <sch_file> [options]\n"
+                  << "  or   kicad-auditor.exe param -r <ref> -i <sch_file> [options]\n\n"
+                  << "Analyze a specific component in the schematic for its nets, connections and nearby neighbors.\n\n"
+                  << "Options:\n"
+                  << "  -r, --ref <name>     Component Reference designator (e.g. U11)\n"
+                  << "  -i, --input <file>   Path to the schematic file (.kicad_sch)\n"
+                  << "  -j, --json           Output result in structured JSON format\n"
+                  << "  -h, --help           Show this help message\n";
     } else if (command == "test") {
         std::cout << "Usage: kicad-auditor.exe test\n\n"
                   << "Run built-in high-precision geometric diagnostic tests to verify types.hpp correctness.\n";
@@ -135,7 +149,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    if (command != "sch" && command != "pcb" && command != "run" && command != "test") {
+    if (command != "sch" && command != "pcb" && command != "run" && command != "param" && command != "test") {
         std::cerr << "[ERROR] Unknown command: " << command << "\n\n";
         print_global_help();
         return 1;
@@ -144,6 +158,8 @@ int main(int argc, char* argv[]) {
     // 参数变量声明
     std::string input_path;
     std::string output_path;
+    std::string ref_name;
+    bool output_json = false;
     double clearance_val = 0.2; // 默认电气安全间距 0.2 mm
 
     // 检查子命令帮助请求
@@ -155,8 +171,16 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // 允许位置参数解析：param <ref> <input_file> [options]
+    size_t start_idx = 2;
+    if (command == "param" && args.size() >= 4 && args[2][0] != '-' && args[3][0] != '-') {
+        ref_name = args[2];
+        input_path = args[3];
+        start_idx = 4;
+    }
+
     // 解析参数列表
-    for (size_t i = 2; i < args.size(); ++i) {
+    for (size_t i = start_idx; i < args.size(); ++i) {
         std::string_view arg = args[i];
         if (arg == "-i" || arg == "--input") {
             if (i + 1 < args.size()) {
@@ -172,6 +196,15 @@ int main(int argc, char* argv[]) {
                 std::cerr << "[ERROR] Missing value for option: " << arg << "\n";
                 return 1;
             }
+        } else if (arg == "-r" || arg == "--ref") {
+            if (i + 1 < args.size()) {
+                ref_name = args[++i];
+            } else {
+                std::cerr << "[ERROR] Missing value for option: " << arg << "\n";
+                return 1;
+            }
+        } else if (arg == "-j" || arg == "--json") {
+            output_json = true;
         } else if (arg == "-c" || arg == "--clearance") {
             if (i + 1 < args.size()) {
                 try {
@@ -226,27 +259,69 @@ int main(int argc, char* argv[]) {
         SchRuleRegistry registry;
         registry.register_rule(create_isolation_rule());
         registry.register_rule(create_fb_resistor_rule());
+        registry.register_rule(create_comp_spec_rule());
 
         Report report = analyzer.analyze(registry);
 
-        std::cout << "========================================================\n";
-        std::cout << " Schematic Static Safety Audit Report\n";
-        std::cout << "========================================================\n";
-        if (report.violations.empty()) {
-            std::cout << "[SUCCESS] No schematic safety violations detected!\n";
-        } else {
-            int errors = 0;
-            int warnings = 0;
-            int infos = 0;
-            for (const auto& v : report.violations) {
-                std::cout << "  - [" << v.severity << "] [" << v.rule_id << "] @" << v.location << ": " << v.message << "\n";
-                if (v.severity == "ERROR") errors++;
-                else if (v.severity == "WARNING") warnings++;
-                else infos++;
+        if (output_json) {
+            std::cout << "{\n"
+                      << "  \"violations\": [\n";
+            for (size_t i = 0; i < report.violations.size(); ++i) {
+                const auto& v = report.violations[i];
+                std::cout << "    {\n"
+                          << "      \"rule_id\": \"" << v.rule_id << "\",\n"
+                          << "      \"severity\": \"" << v.severity << "\",\n"
+                          << "      \"location\": \"" << v.location << "\",\n"
+                          << "      \"message\": \"" << v.message << "\"\n"
+                          << "    }";
+                if (i + 1 < report.violations.size()) std::cout << ",";
+                std::cout << "\n";
             }
-            std::cout << "\n========================================================\n";
-            std::cout << " Audit Summary: " << errors << " errors, " << warnings << " warnings, " << infos << " infos.\n";
+            std::cout << "  ],\n"
+                      << "  \"components\": [\n";
+            const auto& comps = analyzer.get_components();
+            for (size_t i = 0; i < comps.size(); ++i) {
+                const auto& c = comps[i];
+                std::cout << "    {\n"
+                          << "      \"ref\": \"" << c.ref << "\",\n"
+                          << "      \"value\": \"" << c.value << "\",\n"
+                          << "      \"pos\": {\"x\": " << c.pos.x << ", \"y\": " << c.pos.y << "},\n"
+                          << "      \"properties\": {\n";
+                size_t p_idx = 0;
+                for (const auto& prop : c.properties) {
+                    std::string clean_val = prop.second;
+                    std::replace(clean_val.begin(), clean_val.end(), '"', '\'');
+                    std::cout << "        \"" << prop.first << "\": \"" << clean_val << "\"";
+                    if (++p_idx < c.properties.size()) std::cout << ",";
+                    std::cout << "\n";
+                }
+                std::cout << "      }\n"
+                          << "    }";
+                if (i + 1 < comps.size()) std::cout << ",";
+                std::cout << "\n";
+            }
+            std::cout << "  ]\n"
+                      << "}\n";
+        } else {
             std::cout << "========================================================\n";
+            std::cout << " Schematic Static Safety Audit Report\n";
+            std::cout << "========================================================\n";
+            if (report.violations.empty()) {
+                std::cout << "[SUCCESS] No schematic safety violations detected!\n";
+            } else {
+                int errors = 0;
+                int warnings = 0;
+                int infos = 0;
+                for (const auto& v : report.violations) {
+                    std::cout << "  - [" << v.severity << "] [" << v.rule_id << "] @" << v.location << ": " << v.message << "\n";
+                    if (v.severity == "ERROR") errors++;
+                    else if (v.severity == "WARNING") warnings++;
+                    else infos++;
+                }
+                std::cout << "\n========================================================\n";
+                std::cout << " Audit Summary: " << errors << " errors, " << warnings << " warnings, " << infos << " infos.\n";
+                std::cout << "========================================================\n";
+            }
         }
     } 
 
@@ -305,8 +380,9 @@ int main(int argc, char* argv[]) {
                     SchAnalyzer sch_analyzer;
                     if (sch_analyzer.load_schematic(*sch_root)) {
                         SchRuleRegistry sch_registry;
-                        sch_registry.register_rule(create_isolation_rule());
-                        sch_registry.register_rule(create_fb_resistor_rule());
+                    sch_registry.register_rule(create_isolation_rule());
+                    sch_registry.register_rule(create_fb_resistor_rule());
+                    sch_registry.register_rule(create_comp_spec_rule());
                         
                         Report sch_report = sch_analyzer.analyze(sch_registry);
                         global_report.violations.insert(global_report.violations.end(), sch_report.violations.begin(), sch_report.violations.end());
@@ -428,6 +504,134 @@ int main(int argc, char* argv[]) {
         std::cout << "========================================================\n";
         std::cout << " Collaborative Audit Summary: " << errors << " errors, " << warnings << " warnings, " << infos << " infos.\n";
         std::cout << "========================================================\n";
+    } 
+
+    else if (command == "param") {
+        if (input_path.empty()) {
+            std::cerr << "[ERROR] Schematic input file path is required. Use '-i' or position argument.\n";
+            return 1;
+        }
+        if (ref_name.empty()) {
+            std::cerr << "[ERROR] Component reference is required. Use '-r' or position argument.\n";
+            return 1;
+        }
+
+        std::ifstream file(input_path);
+        if (!file.is_open()) {
+            std::cerr << "[ERROR] Failed to open schematic file: " << input_path << "\n";
+            return 1;
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string content = buffer.str();
+
+        auto sch_root = parse_sexpr(content);
+        if (!sch_root) {
+            std::cerr << "[ERROR] Failed to parse schematic S-Expression.\n";
+            return 1;
+        }
+
+        SchAnalyzer analyzer;
+        if (!analyzer.load_schematic(*sch_root)) {
+            std::cerr << "[ERROR] Failed to build schematic topology.\n";
+            return 1;
+        }
+
+        ComponentAnalysisResult result = analyzer.analyze_component(ref_name, 30.0);
+
+        if (!result.found) {
+            if (output_json) {
+                std::cout << "{\"error\": \"Component " << ref_name << " not found in schematic.\"}\n";
+            } else {
+                std::cerr << "[ERROR] Component " << ref_name << " not found in schematic!\n";
+            }
+            return 1;
+        }
+
+        // 格式化输出
+        if (output_json) {
+            std::cout << "{\n"
+                      << "  \"ref\": \"" << result.ref << "\",\n"
+                      << "  \"value\": \"" << result.value << "\",\n"
+                      << "  \"pos\": {\"x\": " << result.pos.x << ", \"y\": " << result.pos.y << "},\n"
+                      << "  \"properties\": {\n";
+            size_t p_idx = 0;
+            for (const auto& prop : result.properties) {
+                std::string clean_val = prop.second;
+                std::replace(clean_val.begin(), clean_val.end(), '"', '\'');
+                std::cout << "    \"" << prop.first << "\": \"" << clean_val << "\"";
+                if (++p_idx < result.properties.size()) std::cout << ",";
+                std::cout << "\n";
+            }
+            std::cout << "  },\n"
+                      << "  \"pins\": [\n";
+            for (size_t i = 0; i < result.pins.size(); ++i) {
+                const auto& p = result.pins[i];
+                std::cout << "    {\n"
+                          << "      \"number\": \"" << p.pin_num << "\",\n"
+                          << "      \"name\": \"" << p.pin_name << "\",\n"
+                          << "      \"net\": \"" << p.net_name << "\",\n"
+                          << "      \"connections\": [\n";
+                for (size_t j = 0; j < p.other_connections.size(); ++j) {
+                    std::cout << "        {\"ref\": \"" << p.other_connections[j].first << "\", \"pin\": \"" << p.other_connections[j].second << "\"}";
+                    if (j + 1 < p.other_connections.size()) std::cout << ",";
+                    std::cout << "\n";
+                }
+                std::cout << "      ]\n"
+                          << "    }";
+                if (i + 1 < result.pins.size()) std::cout << ",";
+                std::cout << "\n";
+            }
+            std::cout << "  ],\n"
+                      << "  \"nearby_components\": [\n";
+            for (size_t i = 0; i < result.nearby_components.size(); ++i) {
+                std::cout << "    {\"ref\": \"" << result.nearby_components[i].ref << "\", \"value\": \"" << result.nearby_components[i].value << "\", \"distance\": " << result.nearby_components[i].distance << "}";
+                if (i + 1 < result.nearby_components.size()) std::cout << ",";
+                std::cout << "\n";
+            }
+            std::cout << "  ]\n"
+                      << "}\n";
+        } else {
+            std::cout << "========================================================\n"
+                      << " KiCad-Auditor Component Analysis Report: " << result.ref << "\n"
+                      << "========================================================\n"
+                      << "Device Properties:\n"
+                      << "  - Reference: " << result.ref << "\n"
+                      << "  - Value: " << result.value << "\n"
+                      << "  - Position: (" << result.pos.x << ", " << result.pos.y << ") mm\n";
+            for (const auto& prop : result.properties) {
+                std::cout << "  - " << prop.first << ": " << prop.second << "\n";
+            }
+            std::cout << "\nPin Electrical Connections:\n";
+
+            for (const auto& p : result.pins) {
+                std::cout << "  - Pin " << p.pin_num;
+                if (!p.pin_name.empty()) {
+                    std::cout << " (" << p.pin_name << ")";
+                }
+                std::cout << " -> Net: [" << p.net_name << "]\n";
+                if (p.other_connections.empty()) {
+                    std::cout << "    [No direct component connections]\n";
+                } else {
+                    std::cout << "    Directly Connected: ";
+                    for (size_t j = 0; j < p.other_connections.size(); ++j) {
+                        std::cout << p.other_connections[j].first << "." << p.other_connections[j].second;
+                        if (j + 1 < p.other_connections.size()) std::cout << ", ";
+                    }
+                    std::cout << "\n";
+                }
+            }
+
+            std::cout << "\nNearby Components (within 30mm radius, ordered by distance):\n";
+            if (result.nearby_components.empty()) {
+                std::cout << "  - No nearby components found.\n";
+            } else {
+                for (const auto& n : result.nearby_components) {
+                    std::cout << "  - " << n.ref << " (" << n.value << ") @ " << std::fixed << std::setprecision(2) << n.distance << " mm\n";
+                }
+            }
+            std::cout << "========================================================\n";
+        }
     }
 
     return 0;

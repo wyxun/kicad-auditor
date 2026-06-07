@@ -9,7 +9,7 @@ TARGET = kicad-auditor.exe
 
 # Sources
 SRCS = src/main.cpp src/common/sexpr.cpp src/common/json.cpp src/common/report.cpp src/test_sexpr.cpp \
-       src/sch/sch_analyzer.cpp src/sch/rules/isolation_rule.cpp src/sch/rules/fb_resistor_rule.cpp \
+       src/sch/sch_analyzer.cpp src/sch/rules/isolation_rule.cpp src/sch/rules/fb_resistor_rule.cpp src/sch/rules/comp_spec_rule.cpp \
        src/pcb/pcb_analyzer.cpp src/pcb/rules/emi_clearance_rule.cpp src/pcb/rules/sensitive_shield_rule.cpp
 
 # Default rule

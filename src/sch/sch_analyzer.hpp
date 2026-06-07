@@ -29,6 +29,7 @@ struct ComponentInfo {
     std::string value;    // 型号/值，如 "PC817", "10k", "LM2596"
     Point pos;            // 器件绝对物理位置 (x, y)
     std::vector<PinInfo> pins; // 引脚列表
+    std::unordered_map<std::string, std::string> properties;
 
     const PinInfo* find_pin(const std::string& pin_name) const {
         for (const auto& pin : pins) {
@@ -36,6 +37,29 @@ struct ComponentInfo {
         }
         return nullptr;
     }
+};
+
+struct PinConnectionInfo {
+    std::string pin_num;
+    std::string pin_name;
+    std::string net_name;
+    std::vector<std::pair<std::string, std::string>> other_connections; // {comp_ref, pin_name}
+};
+
+struct NearbyComponentInfo {
+    std::string ref;
+    std::string value;
+    double distance;
+};
+
+struct ComponentAnalysisResult {
+    bool found = false;
+    std::string ref;
+    std::string value;
+    Point pos;
+    std::vector<PinConnectionInfo> pins;
+    std::vector<NearbyComponentInfo> nearby_components;
+    std::unordered_map<std::string, std::string> properties;
 };
 
 class SchAnalyzer;
@@ -56,6 +80,17 @@ public:
  */
 class SchAnalyzer {
 private:
+    struct LibPinInfo {
+        std::string number;
+        std::string name;
+        Point rel_pos;
+    };
+
+    std::unordered_map<std::string, std::vector<LibPinInfo>> lib_symbols_;
+
+    void extract_lib_symbols(const SExpr& sch_root);
+    void collect_lib_pins(const SExpr& node, std::vector<LibPinInfo>& pins);
+
     std::vector<ComponentInfo> components_;
     
     // 物理图邻接表：点ID ("x.xxx,y.yyy") -> 连接的其他点ID列表
@@ -93,6 +128,11 @@ public:
     std::string get_net_name(const std::string& pt_id) const;
 
     /**
+     * @brief 提取特定元器件引脚的网络连接和物理邻近器件（高内聚低耦合业务封装）
+     */
+    ComponentAnalysisResult analyze_component(const std::string& ref, double nearby_radius = 30.0) const;
+
+    /**
      * @brief 格式化坐标为唯一字符串键值
      */
     static std::string format_point(const Point& pt);
@@ -107,5 +147,7 @@ private:
 // 诊断规则工厂函数
 std::unique_ptr<SchRule> create_isolation_rule();
 std::unique_ptr<SchRule> create_fb_resistor_rule();
+std::unique_ptr<SchRule> create_comp_spec_rule();
 
 } // namespace auditor
+
