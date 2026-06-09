@@ -143,10 +143,15 @@ void SchAnalyzer::extract_symbols(const SExpr& node) {
                 }
             }
 
-            bool is_mirror_y = false;
+            bool mirror_x = false;
+            bool mirror_y = false;
             const auto* mirror_node = node.find_child("mirror");
-            if (mirror_node && mirror_node->get_value_at(0) == "y") {
-                is_mirror_y = true;
+            if (mirror_node) {
+                if (mirror_node->get_value_at(0) == "x") {
+                    mirror_x = true;
+                } else if (mirror_node->get_value_at(0) == "y") {
+                    mirror_y = true;
+                }
             }
 
             std::string lib_id;
@@ -168,8 +173,11 @@ void SchAnalyzer::extract_symbols(const SExpr& node) {
                     double dx = lib_pin.rel_pos.x;
                     double dy = lib_pin.rel_pos.y;
 
-                    if (is_mirror_y) {
+                    if (mirror_x) {
                         dx = -dx;
+                    }
+                    if (mirror_y) {
+                        dy = -dy;
                     }
 
                     // 旋转并转换坐标系 (Y轴反转)
