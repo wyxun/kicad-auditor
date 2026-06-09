@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "[ERROR] Schematic input file path is required. Use '-i' or '--input'.\n";
             return 1;
         }
-        std::cout << "[INFO] Analyzing KiCad Schematic: " << input_path << "\n";
+        std::cerr << "[INFO] Analyzing KiCad Schematic: " << input_path << "\n";
 
         std::ifstream file(input_path);
         if (!file.is_open()) {
