@@ -52,11 +52,6 @@ public:
             auto it_lcsc = comp.properties.find("LCSC Part");
             if (it_lcsc != comp.properties.end()) {
                 lcsc_id = it_lcsc->second;
-            } else {
-                it_lcsc = comp.properties.find("LCSC");
-                if (it_lcsc != comp.properties.end()) {
-                    lcsc_id = it_lcsc->second;
-                }
             }
 
             if (!lcsc_id.empty()) {
@@ -153,10 +148,6 @@ public:
                     std::string u_lcsc_id;
                     auto it_u_lcsc = comp.properties.find("LCSC Part");
                     if (it_u_lcsc != comp.properties.end()) u_lcsc_id = it_u_lcsc->second;
-                    else {
-                        it_u_lcsc = comp.properties.find("LCSC");
-                        if (it_u_lcsc != comp.properties.end()) u_lcsc_id = it_u_lcsc->second;
-                    }
 
                     if (!u_lcsc_id.empty()) {
                         auto it_u_db = lcsc_db.find(u_lcsc_id);
@@ -185,10 +176,6 @@ public:
                                 std::string other_lcsc_id;
                                 auto it_other_lcsc = other_comp.properties.find("LCSC Part");
                                 if (it_other_lcsc != other_comp.properties.end()) other_lcsc_id = it_other_lcsc->second;
-                                else {
-                                    it_other_lcsc = other_comp.properties.find("LCSC");
-                                    if (it_other_lcsc != other_comp.properties.end()) other_lcsc_id = it_other_lcsc->second;
-                                }
 
                                 if (!other_lcsc_id.empty()) {
                                     auto it_other_db = lcsc_db.find(other_lcsc_id);

@@ -236,7 +236,7 @@ int run_sexpr_tests() {
         std::string_view sch_mock_content = R"(
 (schematic
   ;; 1. 正常的光耦隔离器件 U1
-  (symbol (property "Reference" "U1") (property "Value" "PC817") (property "Footprint" "Optocoupler_DIP-4") (property "LCSC" (value "C12345")) (at 100 100)
+  (symbol (property "Reference" "U1") (property "Value" "PC817") (property "Footprint" "Optocoupler_DIP-4") (property "LCSC Part" (value "C12345")) (at 100 100)
     (pin "1" (at -10 -10))  ; 绝对坐标 (90, 90) -> 初级输入+
     (pin "2" (at -10 10))   ; 绝对坐标 (90, 110) -> 初级地 (GND)
     (pin "3" (at 10 10))    ; 绝对坐标 (110, 110) -> 次级地 (SGND)
@@ -252,7 +252,7 @@ int run_sexpr_tests() {
   )
 
   ;; 3. 电源芯片 U3 (关联数据库已有的 C155484, max_voltage 40V, max_current 5A)
-  (symbol (property "Reference" "U3") (property "Value" "LM2596") (property "LCSC" (value "C155484")) (at 300 200)
+  (symbol (property "Reference" "U3") (property "Value" "LM2596") (property "LCSC Part" (value "C155484")) (at 300 200)
     (pin "FB" (at -10 0))   ; 绝对坐标 (290, 200)
     (pin "EN" (at 10 0))    ; 绝对坐标 (310, 200)
     (pin "SW" (at 0 10))    ; 绝对坐标 (300, 210)
@@ -278,18 +278,18 @@ int run_sexpr_tests() {
   )
 
   ;; 7. 缺失数据库规格记录的芯片 U4
-  (symbol (property "Reference" "U4") (property "Value" "MockChip") (property "LCSC" (value "C999999")) (at 500 200)
+  (symbol (property "Reference" "U4") (property "Value" "MockChip") (property "LCSC Part" (value "C999999")) (at 500 200)
     (pin "VCC" (at -10 0)) ; 绝对坐标 (490, 200)
   )
 
   ;; 8. 电感 L1 (载流 3A < 芯片源 5A)
-  (symbol (property "Reference" "L1") (property "Value" "2.2uH") (property "LCSC" (value "C_L_MOCK_3A")) (at 300 300)
+  (symbol (property "Reference" "L1") (property "Value" "2.2uH") (property "LCSC Part" (value "C_L_MOCK_3A")) (at 300 300)
     (pin "1" (at 0 -10)) ; 绝对坐标 (300, 290)
     (pin "2" (at 0 10))  ; 绝对坐标 (300, 310)
   )
 
   ;; 9. 续流二极管 D1 (载流 3A < 芯片源 5A)
-  (symbol (property "Reference" "D1") (property "Value" "SS34") (property "LCSC" (value "C_D_MOCK_3A")) (at 200 300)
+  (symbol (property "Reference" "D1") (property "Value" "SS34") (property "LCSC Part" (value "C_D_MOCK_3A")) (at 200 300)
     (pin "1" (at 0 -10)) ; 绝对坐标 (200, 290)
     (pin "2" (at 0 10))  ; 绝对坐标 (200, 310)
   )
@@ -361,7 +361,7 @@ int run_sexpr_tests() {
             assert_true(u1->properties.at("Reference") == "U1", "U1 Reference property matches");
             assert_true(u1->properties.at("Value") == "PC817", "U1 Value property matches");
             assert_true(u1->properties.at("Footprint") == "Optocoupler_DIP-4", "U1 Footprint property matches");
-            assert_true(u1->properties.at("LCSC") == "C12345", "U1 LCSC property matches (compatible style)");
+            assert_true(u1->properties.at("LCSC Part") == "C12345", "U1 LCSC Part property matches");
 
             // 验证 ComponentAnalysisResult 中自定义属性的传递
             ComponentAnalysisResult analysis_res = analyzer.analyze_component("U1");
@@ -369,7 +369,7 @@ int run_sexpr_tests() {
             assert_true(analysis_res.properties.at("Reference") == "U1", "Analysis result U1 Reference property matches");
             assert_true(analysis_res.properties.at("Value") == "PC817", "Analysis result U1 Value property matches");
             assert_true(analysis_res.properties.at("Footprint") == "Optocoupler_DIP-4", "Analysis result U1 Footprint property matches");
-            assert_true(analysis_res.properties.at("LCSC") == "C12345", "Analysis result U1 LCSC property matches (compatible style)");
+            assert_true(analysis_res.properties.at("LCSC Part") == "C12345", "Analysis result U1 LCSC Part property matches");
 
             // 运行规则库分析
             SchRuleRegistry registry;
