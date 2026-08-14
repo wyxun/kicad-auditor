@@ -1,5 +1,5 @@
 @echo off
-set PATH=D:\software\msys64\mingw64\bin;%PATH%
+set PATH=D:\0_software\msys64\mingw64\bin;%PATH%
 echo [BUILD] Triggering Makefile build using mingw32-make...
 mingw32-make clean
 mingw32-make

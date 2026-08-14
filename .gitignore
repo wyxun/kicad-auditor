@@ -10,3 +10,12 @@ build/
 .idea/
 cmake-build-*/
 .DS_Store
+
+# dsh-integration build artifacts
+dsh-integration/node_modules/
+dsh-integration/lib/
+dsh-integration/*.tsbuildinfo
+dsh-integration/_sample_*
+
+# svg_topology runtime output
+diagrams/

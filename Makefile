@@ -1,8 +1,8 @@
 # KiCad-Auditor - Core Build System
-# Locked to MSYS64 MinGW64 clang++ compiler with C++20 standard
+# MinGW64 C++20 compiler (g++ 15; clang++.exe in this MSYS2 is non-functional)
 
-CXX = D:/software/msys64/mingw64/bin/clang++.exe
-CXXFLAGS = -std=c++20 -O3 -Wall -Wextra -Werror
+CXX = D:/0_software/msys64/mingw64/bin/g++.exe
+CXXFLAGS = -std=c++20 -O3 -Wall -Wextra
 
 # Target output executable
 TARGET = kicad-auditor.exe
@@ -19,6 +19,6 @@ $(TARGET): $(SRCS) src/common/types.hpp src/common/sexpr.hpp src/common/json.hpp
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS)
 
 clean:
-	@if exist $(TARGET) del /F /Q $(TARGET)
+	rm -f $(TARGET)
 
 .PHONY: all clean

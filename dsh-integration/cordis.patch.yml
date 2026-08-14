@@ -1,0 +1,7 @@
+# kicad-auditor-dsh bundle patch: mounts the KiCad circuit-design tools.
+- insert:
+    - id: kicad-auditor-dsh
+      name: '@wx/kicad-auditor-dsh'
+      config:
+        workDir: D:/2_xundoc/project/kicad-auditor
+        auditorPath: D:/2_xundoc/project/kicad-auditor/kicad-auditor.exe
